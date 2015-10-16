@@ -62,13 +62,18 @@ pub enum Element {
 }
 
 
+// TODO: Write info about this for the doc's
+pub enum RenderCallbackBuffer<'a> {
+    F32(&'a mut[&'a mut[f32]])
+}
+
 /// The number of frames available in some buffer.
 pub type NumFrames = usize;
 
 /// A type representing a render callback (aka "Input Procedure")
 /// If set on an AudioUnit, this will be called every time the AudioUnit requests audio.
 /// The first arg is [frames[channels]]; the second is the number of frames to render.
-pub type RenderCallback = FnMut(&mut[&mut[f32]], NumFrames) -> Result<(), String>;
+pub type RenderCallback = FnMut(RenderCallbackBuffer, NumFrames) -> Result<(), String>;
 
 
 /// A rust representation of the au::AudioUnit, including a pointer to the current rendering callback.
@@ -353,7 +358,9 @@ extern "C" fn input_proc(in_ref_con: *mut libc::c_void,
                 })
                 .collect();
 
-        match (*callback)(&mut channels[..], in_number_frames as usize) {
+        // TODO: Construct proper type
+        let buffer = RenderCallbackBuffer::F32(&mut channels[..]);
+        match (*callback)(buffer, in_number_frames as NumFrames) {
             Ok(()) => 0 as au::OSStatus,
             Err(description) => {
                 use std::io::Write;
